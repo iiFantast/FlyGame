@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 
 public class PlayerController1 : MonoBehaviour
 {
-    public float thrustForce = 10f; // Сила тяги (ускорение)
+    public float thrustForce = 15f; // Сила тяги (ускорение)
     public float maxSpeed = 8f; // Максимальная скорость
     public float rotationSpeed = 150f;
     public float drag = 2f; // Скорость торможения (чем меньше, тем дольше скользит)
