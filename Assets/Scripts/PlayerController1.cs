@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections;
 
 public class PlayerController1 : MonoBehaviour
 {
@@ -21,10 +22,27 @@ public class PlayerController1 : MonoBehaviour
     public Transform firePoint;
     public float fireRate = 0.5f;
     private float nextFireTime = 0f;
+    
+    // Для респавна
+    private Vector3 startPosition;
+    private Quaternion startRotation;
+    public float respawnDelay = 2f; // Задержка перед возрождением
+    private bool isDead = false;
+
+    // Компоненты для включения/выключения
+    private SpriteRenderer spriteRenderer;
+    private Collider2D playerCollider;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        playerCollider = GetComponent<Collider2D>();
+        
+        // Сохраняем стартовую позицию
+        startPosition = transform.position;
+        startRotation = transform.rotation;
+        
         currentHealth = maxHealth;
         UpdateHealthUI();
         
@@ -35,6 +53,8 @@ public class PlayerController1 : MonoBehaviour
 
     public void OnMove(InputValue value)
     {
+        if (isDead) return; // Блокируем управление во время смерти
+        
         Vector2 input = value.Get<Vector2>();
         thrustInput = input.y;
         rotationInput = input.x;
@@ -42,6 +62,8 @@ public class PlayerController1 : MonoBehaviour
 
     public void OnFire(InputValue value)
     {
+        if (isDead) return; // Блокируем стрельбу во время смерти
+        
         if (Time.time >= nextFireTime)
         {
             if (firePoint != null && bulletPrefab != null)
@@ -54,7 +76,9 @@ public class PlayerController1 : MonoBehaviour
 
     void FixedUpdate()
     {
-        // Поворот самолёта (A/D или стрелки влево/вправо)
+        if (isDead) return; // Блокируем физику во время смерти
+        
+        // Поворот самолёта
         float rotation = -rotationInput * rotationSpeed * Time.fixedDeltaTime;
         rb.rotation += rotation;
 
@@ -64,7 +88,6 @@ public class PlayerController1 : MonoBehaviour
             Vector2 thrustDirection = transform.right * thrustInput;
             rb.AddForce(thrustDirection * thrustForce);
 
-            // Ограничиваем максимальную скорость
             if (rb.linearVelocity.magnitude > maxSpeed)
             {
                 rb.linearVelocity = rb.linearVelocity.normalized * maxSpeed;
@@ -72,9 +95,10 @@ public class PlayerController1 : MonoBehaviour
         }
         else
         {
-            // Плавное замедление
             rb.linearVelocity = Vector2.Lerp(rb.linearVelocity, Vector2.zero, drag * Time.fixedDeltaTime);
-        }      
+        }
+
+        rb.angularVelocity = 0f;
     }
     
     void OnCollisionEnter2D(Collision2D collision)
@@ -87,6 +111,8 @@ public class PlayerController1 : MonoBehaviour
 
     public void TakeDamage(int damage)
     {
+        if (isDead) return; // Не получаем урон, если уже мертвы
+        
         currentHealth -= damage;
         UpdateHealthUI();
         Debug.Log("Player1 took damage! Current Health: " + currentHealth);
@@ -107,12 +133,49 @@ public class PlayerController1 : MonoBehaviour
 
     private void Die()
     {
+        isDead = true;
         Debug.Log("Player1 is dead!");
+        
+        // Уведомляем GameManager
         if (GameManager.Instance != null)
         {
             GameManager.Instance.GameOver("Player1");
         }
         
-        gameObject.SetActive(false);
+        // Делаем игрока невидимым и неактивным
+        spriteRenderer.enabled = false;
+        playerCollider.enabled = false;
+        rb.linearVelocity = Vector2.zero;
+        thrustInput = 0;
+        rotationInput = 0;
+        
+        // Запускаем респавн через задержку
+        StartCoroutine(RespawnAfterDelay());
+    }
+
+    private IEnumerator RespawnAfterDelay()
+    {
+        yield return new WaitForSeconds(respawnDelay);
+        Respawn();
+    }
+
+    private void Respawn()
+    {
+        Debug.Log("Player1 respawned!");
+        
+        // Восстанавливаем позицию и здоровье
+        transform.position = startPosition;
+        transform.rotation = startRotation;
+        currentHealth = maxHealth;
+        UpdateHealthUI();
+        
+        // Включаем обратно компоненты
+        spriteRenderer.enabled = true;
+        playerCollider.enabled = true;
+        isDead = false;
+        
+        // Сбрасываем скорость
+        rb.linearVelocity = Vector2.zero;
+        rb.angularVelocity = 0f;
     }
 }
