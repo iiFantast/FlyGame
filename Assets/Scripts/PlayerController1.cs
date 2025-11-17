@@ -9,7 +9,7 @@ public class PlayerController1 : MonoBehaviour
     public float maxSpeed = 8f; // Максимальная скорость
     public float rotationSpeed = 150f;
     public float drag = 2f; // Скорость торможения (чем меньше, тем дольше скользит)
-    public int maxHealth = 10;
+    public int maxHealth = 15;
     private int currentHealth;
     private float thrustInput;
     private float rotationInput;
